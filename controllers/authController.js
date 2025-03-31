@@ -1,21 +1,48 @@
 const User = require('../models/User')
+const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
 
 exports.loginForm = (req, res) => {
   res.json({ message: 'Aquí va el formulario de login (simulado)' })
 }
 
-exports.login = (req, res) => {
+exports.login = async (req, res) => {
   const { email, password } = req.body
 
   if (!email || !password) {
-    return res.status(400).json({ error: 'Faltan campos requeridos' })
+    return res.status(400).json({ error: 'Email y contraseña son obligatorios' })
   }
 
-  if (email === 'admin@ticketera.com' && password === '1234') {
-    return res.json({ message: 'Login exitoso' })
-  } else {
-    return res.status(401).json({ error: 'Credenciales inválidas' })
+  try {
+    const user = await User.findOne({ email })
+    if (!user) {
+      return res.status(401).json({ error: 'Usuario no encontrado' })
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password)
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Contraseña incorrecta' })
+    }
+
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    )
+
+    // Login exitoso
+    res.json({
+      message: 'Login exitoso',
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    })
+  } catch (error) {
+    console.error('Error al iniciar sesión:', error) // Log the error internally
+    res.status(500).json({ error: 'Error al iniciar sesión. Por favor, inténtelo de nuevo más tarde.' })
   }
 }
 
@@ -48,5 +75,14 @@ exports.register = async (req, res) => {
     })
   } catch (error) {
     res.status(500).json({ error: 'Error al registrar usuario', details: error.message })
+  }
+}
+
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({}, '-password') // Excluye la contraseña
+    res.json(users)
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener usuarios', details: error.message })
   }
 }

@@ -20,7 +20,7 @@ build/
 
 # Testing
 coverage/
-api.http
+*.http
 
 # Editor directories and files
 .idea/
