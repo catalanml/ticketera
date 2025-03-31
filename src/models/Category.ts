@@ -1,20 +1,20 @@
-const mongoose = require('mongoose')
+import { Schema, model, Document, Types } from 'mongoose'
 
-const categorySchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true
-  },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  editedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null
-  }
-}, { timestamps: true })
+export interface ICategory extends Document {
+  name: string
+  createdBy: Types.ObjectId
+  editedBy?: Types.ObjectId
+  createdAt: Date
+  updatedAt: Date
+}
 
-module.exports = mongoose.model('Category', categorySchema)
+const categorySchema = new Schema<ICategory>(
+  {
+    name: { type: String, required: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    editedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null }
+  },
+  { timestamps: true }
+)
+
+export default model<ICategory>('Category', categorySchema)

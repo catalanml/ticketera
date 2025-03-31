@@ -1,17 +1,67 @@
-const User = require('../models/User')
-const jwt = require('jsonwebtoken')
-const bcrypt = require('bcrypt')
+import { Request, Response } from 'express'
+import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
+import User, { IUser } from '../models/User'
+import { z } from 'zod'
 
-exports.loginForm = (req, res) => {
-  res.json({ message: 'Aquí va el formulario de login (simulado)' })
+// 🎯 Esquemas de validación con Zod
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(4)
+})
+
+const registerSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(4)
+})
+
+export const register = async (req: Request, res: Response): Promise<Response> => {
+  const parseResult = registerSchema.safeParse(req.body)
+
+  if (!parseResult.success) {
+    return res.status(400).json({
+      error: 'Datos inválidos',
+      issues: parseResult.error.format()
+    })
+  }
+
+  const { name, email, password } = parseResult.data
+
+  try {
+    const existingUser = await User.findOne({ email })
+    if (existingUser) {
+      return res.status(409).json({ error: 'El email ya está registrado' })
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10)
+    const user = new User({ name, email, password: hashedPassword })
+    await user.save()
+
+    return res.status(201).json({
+      message: 'Usuario registrado correctamente',
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    })
+  } catch (err) {
+    return res.status(500).json({ error: 'Error al registrar usuario', details: (err as Error).message })
+  }
 }
 
-exports.login = async (req, res) => {
-  const { email, password } = req.body
+export const login = async (req: Request, res: Response): Promise<Response> => {
+  const parseResult = loginSchema.safeParse(req.body)
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email y contraseña son obligatorios' })
+  if (!parseResult.success) {
+    return res.status(400).json({
+      error: 'Datos inválidos',
+      issues: parseResult.error.format()
+    })
   }
+
+  const { email, password } = parseResult.data
 
   try {
     const user = await User.findOne({ email })
@@ -25,13 +75,12 @@ exports.login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
+      { userId: user._id },
+      process.env.JWT_SECRET as string,
       { expiresIn: '1h' }
     )
 
-    // Login exitoso
-    res.json({
+    return res.json({
       message: 'Login exitoso',
       token,
       user: {
@@ -40,49 +89,16 @@ exports.login = async (req, res) => {
         email: user.email
       }
     })
-  } catch (error) {
-    console.error('Error al iniciar sesión:', error) // Log the error internally
-    res.status(500).json({ error: 'Error al iniciar sesión. Por favor, inténtelo de nuevo más tarde.' })
+  } catch (err) {
+    return res.status(500).json({ error: 'Error al iniciar sesión', details: (err as Error).message })
   }
 }
 
-exports.register = async (req, res) => {
-  const { name, email, password } = req.body
-
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: 'Todos los campos son obligatorios' })
-  }
-
+export const getAllUsers = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const existingUser = await User.findOne({ email })
-    if (existingUser) {
-      return res.status(409).json({ error: 'El email ya está registrado' })
-    }
-
-    const saltRounds = 10
-    const hashedPassword = await bcrypt.hash(password, saltRounds)
-
-    const user = new User({ name, email, password: hashedPassword })
-    await user.save()
-
-    res.status(201).json({
-      message: 'Usuario registrado correctamente',
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email
-      }
-    })
-  } catch (error) {
-    res.status(500).json({ error: 'Error al registrar usuario', details: error.message })
-  }
-}
-
-exports.getAllUsers = async (req, res) => {
-  try {
-    const users = await User.find({}, '-password') // Excluye la contraseña
-    res.json(users)
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener usuarios', details: error.message })
+    const users = await User.find({}, { password: 0 }) // Oculta el password
+    return res.json(users)
+  } catch (err) {
+    return res.status(500).json({ error: 'Error al obtener usuarios', details: (err as Error).message })
   }
 }

@@ -1,14 +1,20 @@
-const express = require('express')
-const router = express.Router()
-const categoryController = require('../controllers/categoryController')
-const authMiddleware = require('../middlewares/authMiddleware')
+import { Router } from 'express'
+import {
+    createCategory,
+    getAllCategories,
+    updateCategory,
+    deleteCategory
+} from '../controllers/categoryController'
+import { authMiddleware } from '../middlewares/authMiddleware'
+import { asyncHandler } from '../utils/asyncHandler'
 
-// Todas las rutas requieren JWT
+const router = Router()
+
 router.use(authMiddleware)
 
-router.get('/', categoryController.index)
-router.post('/create', categoryController.create)
-router.post('/edit', categoryController.edit)
-router.post('/delete', categoryController.delete)
+router.get('/', asyncHandler(getAllCategories))
+router.post('/create', asyncHandler(createCategory))
+router.post('/edit', asyncHandler(updateCategory))
+router.post('/delete', asyncHandler(deleteCategory))
 
-module.exports = router
+export default router

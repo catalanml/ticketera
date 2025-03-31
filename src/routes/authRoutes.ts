@@ -1,11 +1,12 @@
-const express = require('express')
-const router = express.Router()
-const authController = require('../controllers/authController')
-const authMiddleware = require('../middlewares/authMiddleware')
+import { Router } from 'express'
+import { login, register, getAllUsers } from '../controllers/authController'
+import { authMiddleware } from '../middlewares/authMiddleware'
+import { asyncHandler } from '../utils/asyncHandler'
 
-router.get('/login', authController.loginForm)
-router.get('/users', authMiddleware, authController.getAllUsers)
-router.post('/login', authController.login)
-router.post('/register', authController.register)
+const router = Router()
 
-module.exports = router
+router.post('/login', asyncHandler(login))
+router.post('/register', asyncHandler(register))
+router.get('/users', authMiddleware, asyncHandler(getAllUsers))
+
+export default router
