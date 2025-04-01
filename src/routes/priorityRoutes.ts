@@ -14,7 +14,8 @@ router.use(authMiddleware)
 
 router.get('/', asyncHandler(getAllPriorities))
 router.post('/create', asyncHandler(createPriority))
-router.post('/edit', asyncHandler(updatePriority))
-router.post('/delete', asyncHandler(deletePriority))
+router.patch('/:id', asyncHandler(updatePriority))
+router.delete('/:id', asyncHandler(deletePriority))
+
 
 export default router

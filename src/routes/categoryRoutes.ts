@@ -14,7 +14,7 @@ router.use(authMiddleware)
 
 router.get('/', asyncHandler(getAllCategories))
 router.post('/create', asyncHandler(createCategory))
-router.post('/edit', asyncHandler(updateCategory))
-router.post('/delete', asyncHandler(deleteCategory))
+router.patch('/:id', asyncHandler(updateCategory))
+router.delete('/:id', asyncHandler(deleteCategory))
 
 export default router

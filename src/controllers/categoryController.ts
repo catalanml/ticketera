@@ -39,7 +39,11 @@ export const getAllCategories = async (_: Request, res: Response): Promise<Respo
 }
 
 export const updateCategory = async (req: Request, res: Response): Promise<Response> => {
-  const validation = updateCategorySchema.safeParse(req.body)
+  const validation = updateCategorySchema.safeParse({
+    id: req.params.id,
+    ...req.body
+  })
+
   if (!validation.success) {
     return res.status(400).json({ error: validation.error.format() })
   }
@@ -47,18 +51,22 @@ export const updateCategory = async (req: Request, res: Response): Promise<Respo
   const { id, name, editedBy } = validation.data
 
   try {
-    await Category.findByIdAndUpdate(id, {
-      name,
-      editedBy: editedBy ?? req.user?.userId // si no viene, usar el del token
-    })
+    const updateData: Record<string, any> = {}
+    if (name) updateData.name = name
+    updateData.editedBy = editedBy ?? req.user?.userId
+
+    await Category.findByIdAndUpdate(id, updateData)
+
     return res.json({ message: 'Categoría actualizada con éxito' })
   } catch (err) {
     return res.status(500).json({ error: 'No se pudo actualizar', details: (err as Error).message })
   }
 }
 
+
 export const deleteCategory = async (req: Request, res: Response): Promise<Response> => {
-  const validation = deleteCategorySchema.safeParse(req.body)
+  const validation = deleteCategorySchema.safeParse({ id: req.params.id })
+
   if (!validation.success) {
     return res.status(400).json({ error: validation.error.format() })
   }
@@ -72,3 +80,4 @@ export const deleteCategory = async (req: Request, res: Response): Promise<Respo
     return res.status(500).json({ error: 'No se pudo eliminar', details: (err as Error).message })
   }
 }
+

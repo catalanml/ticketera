@@ -39,7 +39,8 @@ export const getAllPriorities = async (_: Request, res: Response): Promise<Respo
 }
 
 export const updatePriority = async (req: Request, res: Response): Promise<Response> => {
-  const validation = updatePrioritySchema.safeParse(req.body)
+  const validation = updatePrioritySchema.safeParse({ ...req.body, id: req.params.id })
+
   if (!validation.success) {
     return res.status(400).json({ error: validation.error.format() })
   }
@@ -47,19 +48,26 @@ export const updatePriority = async (req: Request, res: Response): Promise<Respo
   const { id, name, type, editedBy } = validation.data
 
   try {
-    await Priority.findByIdAndUpdate(id, {
-      name,
-      type,
-      editedBy: editedBy ?? req.user?.userId // si no viene, usar el del token
-    })
+    const updateData: Record<string, any> = {}
+    if (name) updateData.name = name
+    if (type) updateData.type = type
+    updateData.editedBy = editedBy ?? req.user?.userId
+
+    await Priority.findByIdAndUpdate(id, updateData)
+
     return res.json({ message: 'Prioridad actualizada con éxito' })
   } catch (err) {
-    return res.status(500).json({ error: 'No se pudo actualizar', details: (err as Error).message })
+    return res.status(500).json({
+      error: 'No se pudo actualizar la prioridad',
+      details: (err as Error).message
+    })
   }
 }
 
+
 export const deletePriority = async (req: Request, res: Response): Promise<Response> => {
-  const validation = deletePrioritySchema.safeParse(req.body)
+  const validation = deletePrioritySchema.safeParse({ id: req.params.id })
+
   if (!validation.success) {
     return res.status(400).json({ error: validation.error.format() })
   }
@@ -70,6 +78,10 @@ export const deletePriority = async (req: Request, res: Response): Promise<Respo
     await Priority.findByIdAndDelete(id)
     return res.json({ message: 'Prioridad eliminada con éxito' })
   } catch (err) {
-    return res.status(500).json({ error: 'No se pudo eliminar', details: (err as Error).message })
+    return res.status(500).json({
+      error: 'No se pudo eliminar',
+      details: (err as Error).message
+    })
   }
 }
+
