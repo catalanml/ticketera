@@ -1,10 +1,19 @@
 import { Request, Response } from 'express'
-import Priority from '../models/Priority'
 import {
   createPrioritySchema,
   updatePrioritySchema,
   deletePrioritySchema
 } from '../validators/prioritySchemas'
+import * as priorityService from '../services/priorityService'
+
+export const getAllPriorities = async (_: Request, res: Response): Promise<Response> => {
+  try {
+    const priorities = await priorityService.getAllPriorities()
+    return res.json(priorities)
+  } catch (err) {
+    return res.status(500).json({ error: 'Error al obtener prioridades' })
+  }
+}
 
 export const createPriority = async (req: Request, res: Response): Promise<Response> => {
   const validation = createPrioritySchema.safeParse(req.body)
@@ -16,12 +25,13 @@ export const createPriority = async (req: Request, res: Response): Promise<Respo
   const userId = req.user?.userId
 
   try {
-    const priority = await Priority.create({ name, type, createdBy: userId })
+    const priority = await priorityService.createPriority(name, type, userId!)
     return res.status(201).json({
       message: 'Prioridad creada con éxito',
       priority: {
         id: priority._id,
-        name: priority.name
+        name: priority.name,
+        type: priority.type
       }
     })
   } catch (err) {
@@ -29,17 +39,11 @@ export const createPriority = async (req: Request, res: Response): Promise<Respo
   }
 }
 
-export const getAllPriorities = async (_: Request, res: Response): Promise<Response> => {
-  try {
-    const categories = await Priority.find().sort({ createdAt: -1 })
-    return res.json(categories)
-  } catch (err) {
-    return res.status(500).json({ error: 'Error al obtener prioridades' })
-  }
-}
-
 export const updatePriority = async (req: Request, res: Response): Promise<Response> => {
-  const validation = updatePrioritySchema.safeParse({ ...req.body, id: req.params.id })
+  const validation = updatePrioritySchema.safeParse({
+    id: req.params.id,
+    ...req.body
+  })
 
   if (!validation.success) {
     return res.status(400).json({ error: validation.error.format() })
@@ -48,22 +52,17 @@ export const updatePriority = async (req: Request, res: Response): Promise<Respo
   const { id, name, type, editedBy } = validation.data
 
   try {
-    const updateData: Record<string, any> = {}
-    if (name) updateData.name = name
-    if (type) updateData.type = type
-    updateData.editedBy = editedBy ?? req.user?.userId
-
-    await Priority.findByIdAndUpdate(id, updateData)
+    await priorityService.updatePriority(id, {
+      name,
+      type,
+      editedBy: editedBy ?? req.user?.userId
+    })
 
     return res.json({ message: 'Prioridad actualizada con éxito' })
   } catch (err) {
-    return res.status(500).json({
-      error: 'No se pudo actualizar la prioridad',
-      details: (err as Error).message
-    })
+    return res.status(500).json({ error: 'No se pudo actualizar la prioridad', details: (err as Error).message })
   }
 }
-
 
 export const deletePriority = async (req: Request, res: Response): Promise<Response> => {
   const validation = deletePrioritySchema.safeParse({ id: req.params.id })
@@ -75,13 +74,9 @@ export const deletePriority = async (req: Request, res: Response): Promise<Respo
   const { id } = validation.data
 
   try {
-    await Priority.findByIdAndDelete(id)
+    await priorityService.deletePriority(id)
     return res.json({ message: 'Prioridad eliminada con éxito' })
   } catch (err) {
-    return res.status(500).json({
-      error: 'No se pudo eliminar',
-      details: (err as Error).message
-    })
+    return res.status(500).json({ error: 'No se pudo eliminar', details: (err as Error).message })
   }
 }
-
