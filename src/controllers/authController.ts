@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { z } from 'zod'
 import * as authService from '../services/authService'
+import logger from '../utils/logger'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -38,6 +39,7 @@ export const register = async (req: Request, res: Response) => {
     if ((err as Error).message.includes('already exists')) {
       res.status(409).json({ error: 'El usuario ya existe' })
     } else {
+      logger.error('Error al registrar usuario', err)
       res.status(500).json({ error: 'Error interno del servidor' })
     }
   }
@@ -62,6 +64,7 @@ export const login = async (req: Request, res: Response) => {
       }
     })
   } catch (err) {
+    logger.error('Error al iniciar sesión', err)
     res.status(401).json({ error: 'Credenciales inválidas' })
   }
 }
@@ -71,6 +74,7 @@ export const getAllUsers = async (_: Request, res: Response) => {
     const users = await authService.getAllUsers()
     res.json(users)
   } catch (err) {
+    logger.error('Error al obtener usuarios', err)
     res.status(500).json({ error: 'Error al obtener usuarios' })
   }
 }
