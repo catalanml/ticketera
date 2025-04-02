@@ -1,10 +1,19 @@
 import { Request, Response } from 'express'
-import Category from '../models/Category'
 import {
   createCategorySchema,
   updateCategorySchema,
   deleteCategorySchema
 } from '../validators/categorySchemas'
+import * as categoryService from '../services/categoryService'
+
+export const getAllCategories = async (_: Request, res: Response): Promise<Response> => {
+  try {
+    const categories = await categoryService.getAllCategories()
+    return res.json(categories)
+  } catch (err) {
+    return res.status(500).json({ error: 'Error al obtener categorías' })
+  }
+}
 
 export const createCategory = async (req: Request, res: Response): Promise<Response> => {
   const validation = createCategorySchema.safeParse(req.body)
@@ -16,7 +25,7 @@ export const createCategory = async (req: Request, res: Response): Promise<Respo
   const userId = req.user?.userId
 
   try {
-    const category = await Category.create({ name, createdBy: userId })
+    const category = await categoryService.createCategory(name, userId!)
     return res.status(201).json({
       message: 'Categoría creada con éxito',
       category: {
@@ -26,15 +35,6 @@ export const createCategory = async (req: Request, res: Response): Promise<Respo
     })
   } catch (err) {
     return res.status(500).json({ error: 'No se pudo crear la categoría', details: (err as Error).message })
-  }
-}
-
-export const getAllCategories = async (_: Request, res: Response): Promise<Response> => {
-  try {
-    const categories = await Category.find().sort({ createdAt: -1 })
-    return res.json(categories)
-  } catch (err) {
-    return res.status(500).json({ error: 'Error al obtener categorías' })
   }
 }
 
@@ -51,11 +51,10 @@ export const updateCategory = async (req: Request, res: Response): Promise<Respo
   const { id, name, editedBy } = validation.data
 
   try {
-    const updateData: Record<string, any> = {}
-    if (name) updateData.name = name
-    updateData.editedBy = editedBy ?? req.user?.userId
-
-    await Category.findByIdAndUpdate(id, updateData)
+    await categoryService.updateCategory(id, {
+      name,
+      editedBy: editedBy ?? req.user?.userId
+    })
 
     return res.json({ message: 'Categoría actualizada con éxito' })
   } catch (err) {
@@ -63,10 +62,8 @@ export const updateCategory = async (req: Request, res: Response): Promise<Respo
   }
 }
 
-
 export const deleteCategory = async (req: Request, res: Response): Promise<Response> => {
   const validation = deleteCategorySchema.safeParse({ id: req.params.id })
-
   if (!validation.success) {
     return res.status(400).json({ error: validation.error.format() })
   }
@@ -74,10 +71,9 @@ export const deleteCategory = async (req: Request, res: Response): Promise<Respo
   const { id } = validation.data
 
   try {
-    await Category.findByIdAndDelete(id)
+    await categoryService.deleteCategory(id)
     return res.json({ message: 'Categoría eliminada con éxito' })
   } catch (err) {
     return res.status(500).json({ error: 'No se pudo eliminar', details: (err as Error).message })
   }
 }
-
