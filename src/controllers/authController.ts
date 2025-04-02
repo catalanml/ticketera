@@ -1,10 +1,7 @@
 import { Request, Response } from 'express'
-import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken'
-import User, { IUser } from '../models/User'
 import { z } from 'zod'
+import * as authService from '../services/authService'
 
-// 🎯 Esquemas de validación con Zod
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(4)
@@ -16,29 +13,20 @@ const registerSchema = z.object({
   password: z.string().min(4)
 })
 
-export const register = async (req: Request, res: Response): Promise<Response> => {
-  const parseResult = registerSchema.safeParse(req.body)
-
-  if (!parseResult.success) {
-    return res.status(400).json({
-      error: 'Datos inválidos',
-      issues: parseResult.error.format()
-    })
+export const register = async (req: Request, res: Response) => {
+  const validation = registerSchema.safeParse(req.body)
+  if (!validation.success) {
+    return res.status(400).json({ error: validation.error.format() })
   }
 
-  const { name, email, password } = parseResult.data
-
   try {
-    const existingUser = await User.findOne({ email })
-    if (existingUser) {
-      return res.status(409).json({ error: 'El email ya está registrado' })
-    }
+    const user = await authService.registerUser(
+      validation.data.name,
+      validation.data.email,
+      validation.data.password
+    )
 
-    const hashedPassword = await bcrypt.hash(password, 10)
-    const user = new User({ name, email, password: hashedPassword })
-    await user.save()
-
-    return res.status(201).json({
+    res.status(201).json({
       message: 'Usuario registrado correctamente',
       user: {
         _id: user._id,
@@ -47,40 +35,24 @@ export const register = async (req: Request, res: Response): Promise<Response> =
       }
     })
   } catch (err) {
-    return res.status(500).json({ error: 'Error al registrar usuario', details: (err as Error).message })
+    if ((err as Error).message.includes('already exists')) {
+      res.status(409).json({ error: 'El usuario ya existe' })
+    } else {
+      res.status(500).json({ error: 'Error interno del servidor' })
+    }
   }
 }
 
-export const login = async (req: Request, res: Response): Promise<Response> => {
-  const parseResult = loginSchema.safeParse(req.body)
-
-  if (!parseResult.success) {
-    return res.status(400).json({
-      error: 'Datos inválidos',
-      issues: parseResult.error.format()
-    })
+export const login = async (req: Request, res: Response) => {
+  const validation = loginSchema.safeParse(req.body)
+  if (!validation.success) {
+    return res.status(400).json({ error: validation.error.format() })
   }
 
-  const { email, password } = parseResult.data
-
   try {
-    const user = await User.findOne({ email })
-    if (!user) {
-      return res.status(401).json({ error: 'Usuario no encontrado' })
-    }
+    const { token, user } = await authService.loginUser(validation.data.email, validation.data.password)
 
-    const isMatch = await bcrypt.compare(password, user.password)
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Contraseña incorrecta' })
-    }
-
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET as string,
-      { expiresIn: '1h' }
-    )
-
-    return res.json({
+    res.json({
       message: 'Login exitoso',
       token,
       user: {
@@ -90,15 +62,15 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
       }
     })
   } catch (err) {
-    return res.status(500).json({ error: 'Error al iniciar sesión', details: (err as Error).message })
+    res.status(401).json({ error: 'Credenciales inválidas' })
   }
 }
 
-export const getAllUsers = async (req: Request, res: Response): Promise<Response> => {
+export const getAllUsers = async (_: Request, res: Response) => {
   try {
-    const users = await User.find({}, { password: 0 }) // Oculta el password
-    return res.json(users)
+    const users = await authService.getAllUsers()
+    res.json(users)
   } catch (err) {
-    return res.status(500).json({ error: 'Error al obtener usuarios', details: (err as Error).message })
+    res.status(500).json({ error: 'Error al obtener usuarios' })
   }
 }
