@@ -74,10 +74,43 @@ router.get('/:id', asyncHandler(getTaskById))
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/TaskCreate'
+ *             type: object
+ *             required:
+ *               - name
+ *               - description
+ *               - category
+ *               - assignedTo
+ *               - priority
+ *               - dueDate
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *               assignedTo:
+ *                 type: string
+ *               priority:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [todo, in-progress, done]
+ *               dueDate:
+ *                 type: string
+ *                 format: date
  *     responses:
  *       201:
- *         description: Tarea creada exitosamente
+ *         description: Tarea creada con éxito
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 task:
+ *                   $ref: '#/components/schemas/Task'
  */
 router.post('/create', validateTaskEntities, asyncHandler(createTask))
 

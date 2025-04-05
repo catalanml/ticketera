@@ -9,14 +9,14 @@ import { TaskStatusEnum } from '../enums/taskStatus.enum'
 
 export const getAllTasks = async (_: Request, res: Response) => {
     const tasks = await taskService.getAllTasks()
-    return res.json(tasks)
+    return res.status(200).json({ message: 'Lista de tareas', tasks })
 }
 
 export const getTaskById = async (req: Request, res: Response) => {
     const { id } = req.params
     const task = await taskService.getTaskById(id)
     if (!task) return res.status(404).json({ error: 'Tarea no encontrada' })
-    return res.json(task)
+    return res.status(200).json({ message: 'Tarea encontrada', task })
 }
 
 export const createTask = async (req: Request, res: Response) => {
@@ -41,8 +41,10 @@ export const createTask = async (req: Request, res: Response) => {
         createdBy
     )
 
-
-    return res.status(201).json({ task })
+    return res.status(201).json({
+        message: 'Tarea creada con éxito',
+        task
+    })
 }
 
 export const updateTask = async (req: Request, res: Response) => {
@@ -93,7 +95,7 @@ export const deleteTask = async (req: Request, res: Response) => {
 export const getTasksByUser = async (req: Request, res: Response): Promise<void> => {
     const { userId } = req.params
     const tasks = await taskService.getTasksByUser(userId)
-    res.json(tasks)
+    res.status(200).json({ message: 'Lista de tareas por prioridad', tasks })
 }
 
 export const getTasksByStatus = async (req: Request, res: Response): Promise<void> => {
@@ -105,19 +107,19 @@ export const getTasksByStatus = async (req: Request, res: Response): Promise<voi
     }
 
     const tasks = await taskService.getTasksByStatus(status as TaskStatusEnum)
-    res.json(tasks)
+    res.status(200).json(tasks)
 }
 
 export const getTasksByCategory = async (req: Request, res: Response): Promise<void> => {
     const { categoryId } = req.params
     const tasks = await taskService.getTasksByCategory(categoryId)
-    res.json(tasks)
+    res.status(200).json(tasks)
 }
 
 export const getTasksByPriority = async (req: Request, res: Response): Promise<void> => {
     const { priorityId } = req.params
     const tasks = await taskService.getTasksByPriority(priorityId)
-    res.json(tasks)
+    res.status(200).json(tasks)
 }
 
 export const getTasksByDueDate = async (req: Request, res: Response): Promise<void> => {
@@ -130,11 +132,11 @@ export const getTasksByDueDate = async (req: Request, res: Response): Promise<vo
     }
 
     const tasks = await taskService.getTasksByDueDate(parsedDate)
-    res.json(tasks)
+    res.status(200).json(tasks)
 }
 
 export const getTasksByCreatedBy = async (req: Request, res: Response): Promise<void> => {
     const { userId } = req.params
     const tasks = await taskService.getTasksByCreatedBy(userId)
-    res.json(tasks)
+    res.status(200).json(tasks)
 }
