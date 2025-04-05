@@ -9,7 +9,10 @@ import * as priorityService from '../services/priorityService'
 export const getAllPriorities = async (_: Request, res: Response): Promise<Response> => {
   try {
     const priorities = await priorityService.getAllPriorities()
-    return res.json(priorities)
+    return res.status(200).json({
+      message: 'Lista de prioridades',
+      priorities
+    })
   } catch (err) {
     return res.status(500).json({ error: 'Error al obtener prioridades' })
   }

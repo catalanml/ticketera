@@ -9,7 +9,10 @@ import * as categoryService from '../services/categoryService'
 export const getAllCategories = async (_: Request, res: Response): Promise<Response> => {
   try {
     const categories = await categoryService.getAllCategories()
-    return res.json(categories)
+    return res.status(200).json({
+      message: 'Lista de categorías',
+      categories
+    })
   } catch (err) {
     return res.status(500).json({ error: 'Error al obtener categorías' })
   }
