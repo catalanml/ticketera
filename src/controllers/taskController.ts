@@ -5,6 +5,7 @@ import {
     completeTaskSchema
 } from '../validators/taskSchemas'
 import * as taskService from '../services/taskService'
+import { TaskStatusEnum } from '../enums/taskStatus.enum'
 
 export const getAllTasks = async (_: Request, res: Response) => {
     const tasks = await taskService.getAllTasks()
@@ -85,4 +86,54 @@ export const deleteTask = async (req: Request, res: Response) => {
 
     await taskService.deleteTask(id)
     return res.json({ message: 'Tarea eliminada exitosamente' })
+}
+
+
+export const getTasksByUser = async (req: Request, res: Response): Promise<void> => {
+    const { userId } = req.params
+    const tasks = await taskService.getTasksByUser(userId)
+    res.json(tasks)
+}
+
+export const getTasksByStatus = async (req: Request, res: Response): Promise<void> => {
+    const { status } = req.params
+
+    if (!Object.values(TaskStatusEnum).includes(status as TaskStatusEnum)) {
+        res.status(400).json({ error: 'Estado inválido' })
+        return
+    }
+
+    const tasks = await taskService.getTasksByStatus(status as TaskStatusEnum)
+    res.json(tasks)
+}
+
+export const getTasksByCategory = async (req: Request, res: Response): Promise<void> => {
+    const { categoryId } = req.params
+    const tasks = await taskService.getTasksByCategory(categoryId)
+    res.json(tasks)
+}
+
+export const getTasksByPriority = async (req: Request, res: Response): Promise<void> => {
+    const { priorityId } = req.params
+    const tasks = await taskService.getTasksByPriority(priorityId)
+    res.json(tasks)
+}
+
+export const getTasksByDueDate = async (req: Request, res: Response): Promise<void> => {
+    const { dueDate } = req.params
+
+    const parsedDate = new Date(dueDate)
+    if (isNaN(parsedDate.getTime())) {
+        res.status(400).json({ error: 'Fecha inválida' })
+        return
+    }
+
+    const tasks = await taskService.getTasksByDueDate(parsedDate)
+    res.json(tasks)
+}
+
+export const getTasksByCreatedBy = async (req: Request, res: Response): Promise<void> => {
+    const { userId } = req.params
+    const tasks = await taskService.getTasksByCreatedBy(userId)
+    res.json(tasks)
 }

@@ -5,7 +5,13 @@ import {
     createTask,
     updateTask,
     deleteTask,
-    completeTask
+    completeTask,
+    getTasksByUser,
+    getTasksByStatus,
+    getTasksByCategory,
+    getTasksByPriority,
+    getTasksByDueDate,
+    getTasksByCreatedBy,
 } from '../controllers/taskController'
 import { authMiddleware } from '../middlewares/authMiddleware'
 import { validateTaskEntities } from '../middlewares/validateEntityExists'
@@ -156,5 +162,138 @@ router.patch('/:id/complete', asyncHandler(completeTask))
  *         description: Tarea eliminada
  */
 router.delete('/:id', asyncHandler(deleteTask))
+
+/**
+ * @openapi
+ * /tasks/user/{userId}:
+ *   get:
+ *     tags:
+ *       - Tareas
+ *     summary: Obtener tareas asignadas a un usuario
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de tareas del usuario
+ */
+router.get('/user/:userId', asyncHandler(getTasksByUser))
+
+/**
+ * @openapi
+ * /tasks/status/{status}:
+ *   get:
+ *     tags:
+ *       - Tareas
+ *     summary: Obtener tareas por estado
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: status
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [todo, in-progress, done]
+ *     responses:
+ *       200:
+ *         description: Lista de tareas por estado
+ *       400:
+ *         description: Estado inválido
+ */
+router.get('/status/:status', asyncHandler(getTasksByStatus))
+
+/**
+ * @openapi
+ * /tasks/category/{categoryId}:
+ *   get:
+ *     tags:
+ *       - Tareas
+ *     summary: Obtener tareas por categoría
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: categoryId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de tareas por categoría
+ */
+router.get('/category/:categoryId', asyncHandler(getTasksByCategory))
+
+/**
+ * @openapi
+ * /tasks/priority/{priorityId}:
+ *   get:
+ *     tags:
+ *       - Tareas
+ *     summary: Obtener tareas por prioridad
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: priorityId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de tareas por prioridad
+ */
+router.get('/priority/:priorityId', asyncHandler(getTasksByPriority))
+
+/**
+ * @openapi
+ * /tasks/due-date/{dueDate}:
+ *   get:
+ *     tags:
+ *       - Tareas
+ *     summary: Obtener tareas por fecha de vencimiento
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: dueDate
+ *         in: path
+ *         required: true
+ *         description: Fecha en formato YYYY-MM-DD
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *       200:
+ *         description: Lista de tareas por fecha
+ *       400:
+ *         description: Fecha inválida
+ */
+router.get('/due-date/:dueDate', asyncHandler(getTasksByDueDate))
+
+/**
+ * @openapi
+ * /tasks/created-by/{userId}:
+ *   get:
+ *     tags:
+ *       - Tareas
+ *     summary: Obtener tareas creadas por un usuario
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de tareas creadas por el usuario
+ */
+router.get('/created-by/:userId', asyncHandler(getTasksByCreatedBy))
 
 export default router
