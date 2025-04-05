@@ -8,6 +8,7 @@
       "./src/types",
       "./node_modules/@types"
     ],
+    "types": [],
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
