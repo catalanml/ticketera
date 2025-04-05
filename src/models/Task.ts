@@ -2,7 +2,7 @@ import { Schema, model, Document, Types } from 'mongoose'
 import { ICategory } from './Category'
 import { IUser } from './User'
 import { IPriority } from './Priority'
-import { TaskStatusEnum } from '../types/enums/taskStatus.enum';
+import { TaskStatusEnum } from '../enums/taskStatus.enum';
 
 
 export interface ITask extends Document {

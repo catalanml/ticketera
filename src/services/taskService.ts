@@ -1,6 +1,6 @@
 import Task, { ITask } from '../models/Task'
 import { Types } from 'mongoose'
-import { TaskStatusEnum } from '../types/enums/taskStatus.enum'
+import { TaskStatusEnum } from '../enums/taskStatus.enum'
 import { ICategory } from '../models/Category'
 import { IUser } from '../models/User'
 import { IPriority } from '../models/Priority'
