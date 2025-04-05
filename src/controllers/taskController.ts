@@ -41,7 +41,8 @@ export const createTask = async (req: Request, res: Response) => {
         createdBy
     )
 
-    return res.status(201).json(task)
+
+    return res.status(201).json({ task })
 }
 
 export const updateTask = async (req: Request, res: Response) => {

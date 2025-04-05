@@ -62,7 +62,7 @@ router.get('/:id', asyncHandler(getTaskById))
 
 /**
  * @openapi
- * /tasks:
+ * /tasks/create:
  *   post:
  *     tags:
  *       - Tareas
@@ -79,7 +79,7 @@ router.get('/:id', asyncHandler(getTaskById))
  *       201:
  *         description: Tarea creada exitosamente
  */
-router.post('/', validateTaskEntities, asyncHandler(createTask))
+router.post('/create', validateTaskEntities, asyncHandler(createTask))
 
 /**
  * @openapi
