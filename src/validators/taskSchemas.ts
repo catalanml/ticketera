@@ -8,7 +8,7 @@ export const createTaskSchema = z.object({
     description: z.string().min(5, 'La descripción es obligatoria'),
     category: objectId,
     assignedTo: objectId,
-    priority: objectId,
+    priority: z.number().int().min(1).max(3, 'La prioridad debe ser 1, 2 o 3'),
     status: z.nativeEnum(TaskStatusEnum).default(TaskStatusEnum.TODO),
     dueDate: z.coerce.date().refine(date => date > new Date(), {
         message: 'La fecha de vencimiento debe ser futura'
@@ -20,7 +20,7 @@ export const updateTaskSchema = z.object({
     description: z.string().min(5).optional(),
     category: objectId.optional(),
     assignedTo: objectId.optional(),
-    priority: objectId.optional(),
+    priority: z.number().int().min(1).max(3, 'La prioridad debe ser 1, 2 o 3').optional(),
     status: z.nativeEnum(TaskStatusEnum).optional(),
     dueDate: z.coerce.date().refine(date => date > new Date(), {
         message: 'La fecha de vencimiento debe ser futura'

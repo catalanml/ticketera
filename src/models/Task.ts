@@ -1,7 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose'
 import { ICategory } from './Category'
 import { IUser } from './User'
-import { IPriority } from './Priority'
 import { TaskStatusEnum } from '../enums/taskStatus.enum';
 
 
@@ -10,7 +9,7 @@ export interface ITask extends Document {
     description: string
     category: ICategory['_id']
     assignedTo: IUser['_id']
-    priority: IPriority['_id']
+    priority: number
     status: TaskStatusEnum
     dueDate: Date
     completedAt?: Date
@@ -29,7 +28,16 @@ const taskSchema = new Schema<ITask>(
         description: { type: String, required: true },
         category: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
         assignedTo: { type: Schema.Types.ObjectId, ref: 'User', required: false },
-        priority: { type: Schema.Types.ObjectId, ref: 'Priority', required: true },
+        priority: {
+            type: Number,
+            required: true,
+            min: 1,
+            max: 3,
+            validate: {
+                validator: Number.isInteger,
+                message: '{VALUE} is not an integer value for priority'
+            }
+        },
         status: {
             type: String,
             enum: Object.values(TaskStatusEnum),
