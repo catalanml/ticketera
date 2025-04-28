@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import Category from '../models/Category'
 import User from '../models/User'
-import Priority from '../models/Priority'
 
 export async function validateTaskEntities(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { category, assignedTo, priority } = req.body
@@ -23,13 +22,6 @@ export async function validateTaskEntities(req: Request, res: Response, next: Ne
             }
         }
 
-        if (priority) {
-            const exists = await Priority.exists({ _id: priority })
-            if (!exists) {
-                res.status(400).json({ error: 'Prioridad no encontrada' })
-                return
-            }
-        }
 
         next()
     } catch (err) {

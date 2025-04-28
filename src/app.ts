@@ -1,7 +1,6 @@
 import express from 'express'
 import authRoutes from './routes/authRoutes'
 import categoryRoutes from './routes/categoryRoutes'
-import priorityRoutes from './routes/priorityRoutes'
 import taskRoutes from './routes/taskRoutes'
 import { errorHandler } from './middlewares/errorHandler'
 import swaggerUi from 'swagger-ui-express'
@@ -23,7 +22,6 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
 app.use('/auth', authRoutes)
 app.use('/categories', categoryRoutes)
-app.use('/priorities', priorityRoutes)
 app.use('/tasks', taskRoutes)
 
 app.get('/', (_, res) => {

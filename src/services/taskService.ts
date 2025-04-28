@@ -3,7 +3,6 @@ import { Types } from 'mongoose'
 import { TaskStatusEnum } from '../enums/taskStatus.enum'
 import { ICategory } from '../models/Category'
 import { IUser } from '../models/User'
-import { IPriority } from '../models/Priority'
 import { populateTaskList, populateTaskOne } from '../utils/populateTask'
 
 export async function getAllTasks(): Promise<ITask[]> {
@@ -19,7 +18,7 @@ export async function createTask(
     description: string,
     category: ICategory['_id'],
     assignedTo: IUser['_id'] | null,
-    priority: IPriority['_id'],
+    priority: number,
     status: TaskStatusEnum,
     dueDate: Date,
     createdBy: string
@@ -45,7 +44,7 @@ export async function updateTask(
         description: string
         category: ICategory['_id']
         assignedTo: IUser['_id'] | null
-        priority: IPriority['_id']
+        priority: number
         status: TaskStatusEnum
         dueDate: Date
         editedBy: string
