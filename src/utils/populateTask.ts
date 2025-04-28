@@ -1,19 +1,11 @@
-import { Query } from 'mongoose'
-import { ITask } from '../models/Task'
+import { PopulateOptions } from 'mongoose';
 
-// ✅ Para múltiples tareas
-export function populateTaskList(query: Query<ITask[], ITask>) {
-  return query
-    .populate('category', 'name')
-    .populate('assignedTo', 'name')
-    .populate('priority', 'name type')
-    .sort({ createdAt: -1 })
-}
-
-// ✅ Para una sola tarea (o null)
-export function populateTaskOne(query: Query<ITask | null, ITask>) {
-  return query
-    .populate('category', 'name')
-    .populate('assignedTo', 'name')
-    .populate('priority', 'name type')
-}
+// Define shared populate options for Task model
+// Using any[] temporarily to bypass potential complex type issue
+// TODO: Investigate and restore PopulateOptions[] if possible
+export const populateTaskOptions: any[] = [
+  { path: 'category', select: 'name description' }, // Populate category details
+  { path: 'assignedTo', select: 'name email' },   // Populate assigned user details
+  { path: 'createdBy', select: 'name email' },     // Populate creator user details
+  { path: 'board', select: 'name status' }          // Populate board details (NEW)
+];

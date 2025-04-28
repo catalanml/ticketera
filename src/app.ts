@@ -1,7 +1,8 @@
 import express from 'express'
 import authRoutes from './routes/authRoutes'
-import categoryRoutes from './routes/categoryRoutes'
-import taskRoutes from './routes/taskRoutes'
+import categoryRoutes from './routes/categoryRoutes';
+import taskRoutes from './routes/taskRoutes';
+import boardRoutes from './routes/boardRoutes'; // Import board routes
 import { errorHandler } from './middlewares/errorHandler'
 import swaggerUi from 'swagger-ui-express'
 import swaggerSpec from './docs/swagger'
@@ -9,6 +10,7 @@ import cors from 'cors'
 
 
 const app = express()
+
 
 app.use(cors({
     origin: 'http://localhost:5173', // Cambia esto si tu frontend está en otro puerto o dominio
@@ -18,11 +20,13 @@ app.use(cors({
 app.use(express.json())
 app.disable('x-powered-by')
 
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.use('/auth', authRoutes)
-app.use('/categories', categoryRoutes)
-app.use('/tasks', taskRoutes)
+app.use('/auth', authRoutes);
+app.use('/categories', categoryRoutes);
+app.use('/tasks', taskRoutes);
+app.use('/boards', boardRoutes); // Use board routes
+
 
 app.get('/', (_, res) => {
     res.send('API Ticketera con TypeScript')

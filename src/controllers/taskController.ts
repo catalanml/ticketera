@@ -1,142 +1,73 @@
-import { Request, Response } from 'express'
-import {
-    createTaskSchema,
-    updateTaskSchema,
-    completeTaskSchema
-} from '../validators/taskSchemas'
-import * as taskService from '../services/taskService'
-import { TaskStatusEnum } from '../enums/taskStatus.enum'
+import { Request, Response } from 'express';
+import * as taskService from '../services/taskService';
+import { asyncHandler } from '../utils/asyncHandler'; // Corrected import
+import { FilterQuery } from 'mongoose';
+import { ITask } from '../models/Task'; // Import ITask
+import { validateTaskEntities } from '../middlewares/validateEntityExists';
 
-export const getAllTasks = async (_: Request, res: Response) => {
-    const tasks = await taskService.getAllTasks()
-    return res.status(200).json({ message: 'Lista de tareas', tasks })
-}
-
-export const getTaskById = async (req: Request, res: Response) => {
-    const { id } = req.params
-    const task = await taskService.getTaskById(id)
-    if (!task) return res.status(404).json({ error: 'Tarea no encontrada' })
-    return res.status(200).json({ message: 'Tarea encontrada', task })
-}
-
-export const createTask = async (req: Request, res: Response) => {
-    const parseResult = createTaskSchema.safeParse(req.body)
-    if (!parseResult.success) {
-        return res.status(400).json({ error: 'Datos inválidos', issues: parseResult.error.format() })
+// @desc    Create a new task
+// @route   POST /tasks
+// @access  Private
+export const createTaskHandler = asyncHandler(async (req: Request, res: Response) => {
+    // req.user is attached by the 'protect' middleware
+    const userId = req.user?.userId; // Corrected access to userId
+    if (!userId) {
+        // This case should ideally be prevented by the protect middleware
+        // but it's good practice to check.
+        // Use UnauthorizedError for consistency if you adopt custom errors widely
+        return res.status(401).json({ error: 'User not authenticated' });
     }
+    // Body already validated by validateRequest middleware using createTaskSchema
+    // Entities (category, assignedTo, board) validated by validateTaskEntities middleware
+    const task = await taskService.createTask(req.body, userId.toString());
+    res.status(201).json(task);
+});
 
-    const { name, description, category, assignedTo, priority, status, dueDate } = parseResult.data
-    const createdBy = req.user?.userId
+// @desc    Get all tasks (with optional filtering)
+// @route   GET /tasks
+// @access  Private
+export const getAllTasksHandler = asyncHandler(async (req: Request, res: Response) => {
+    // Extract potential filters from query parameters
+    const { status, priority, categoryId, assignedToId, boardId } = req.query; // Add boardId
 
-    if (!createdBy) return res.status(401).json({ error: 'Usuario no autenticado' })
+    const filters: FilterQuery<ITask> = {};
+    if (status) filters.status = status as string;
+    if (priority) filters.priority = priority as string;
+    if (categoryId) filters.category = categoryId as string;
+    if (assignedToId) filters.assignedTo = assignedToId as string;
+    if (boardId) filters.board = boardId as string; // Add board filter
 
-    const task = await taskService.createTask(
-        name,
-        description,
-        category,
-        assignedTo,
-        priority,
-        status,
-        dueDate,
-        createdBy
-    )
+    const tasks = await taskService.getAllTasks(filters);
+    res.status(200).json(tasks);
+});
 
-    return res.status(201).json({
-        message: 'Tarea creada con éxito',
-        task
-    })
-}
+// @desc    Get a single task by ID
+// @route   GET /tasks/:id
+// @access  Private
+export const getTaskByIdHandler = asyncHandler(async (req: Request, res: Response) => {
+    // ID validated by validateRequest middleware using taskIdParamSchema
+    const task = await taskService.getTaskById(req.params.id);
+    // Service throws NotFoundError if not found
+    res.status(200).json(task);
+});
 
-export const updateTask = async (req: Request, res: Response) => {
-    const { id } = req.params
+// @desc    Update a task by ID
+// @route   PUT /tasks/:id
+// @access  Private
+export const updateTaskHandler = asyncHandler(async (req: Request, res: Response) => {
+    // ID and Body validated by validateRequest middleware using updateTaskSchema
+    // Entities (category, assignedTo, board) validated by validateTaskEntities middleware
+    const task = await taskService.updateTask(req.params.id, req.body);
+    // Service throws NotFoundError if not found
+    res.status(200).json(task);
+});
 
-    const parseResult = updateTaskSchema.safeParse(req.body)
-    if (!parseResult.success) {
-        return res.status(400).json({ error: 'Datos inválidos', issues: parseResult.error.format() })
-    }
-
-    const task = await taskService.getTaskById(id)
-    if (!task) return res.status(404).json({ error: 'Tarea no encontrada' })
-
-    const updated = await taskService.updateTask(id, {
-        ...parseResult.data,
-        editedBy: parseResult.data.editedBy ?? req.user?.userId
-    })
-
-    return res.json(updated)
-}
-
-export const completeTask = async (req: Request, res: Response) => {
-    const { id } = req.params
-
-    const parseResult = completeTaskSchema.safeParse(req.body)
-    if (!parseResult.success) {
-        return res.status(400).json({ error: 'Datos inválidos', issues: parseResult.error.format() })
-    }
-
-    const task = await taskService.getTaskById(id)
-    if (!task) return res.status(404).json({ error: 'Tarea no encontrada' })
-    if (task.completedAt) return res.status(400).json({ error: 'La tarea ya está completada' })
-
-    const updated = await taskService.completeTask(id, parseResult.data.completedAt, parseResult.data.editedBy)
-    return res.json(updated)
-}
-
-export const deleteTask = async (req: Request, res: Response) => {
-    const { id } = req.params
-    const task = await taskService.getTaskById(id)
-    if (!task) return res.status(404).json({ error: 'Tarea no encontrada' })
-
-    await taskService.deleteTask(id)
-    return res.json({ message: 'Tarea eliminada exitosamente' })
-}
-
-
-export const getTasksByUser = async (req: Request, res: Response): Promise<void> => {
-    const { userId } = req.params
-    const tasks = await taskService.getTasksByUser(userId)
-    res.status(200).json({ message: 'Lista de tareas por prioridad', tasks })
-}
-
-export const getTasksByStatus = async (req: Request, res: Response): Promise<void> => {
-    const { status } = req.params
-
-    if (!Object.values(TaskStatusEnum).includes(status as TaskStatusEnum)) {
-        res.status(400).json({ error: 'Estado inválido' })
-        return
-    }
-
-    const tasks = await taskService.getTasksByStatus(status as TaskStatusEnum)
-    res.status(200).json(tasks)
-}
-
-export const getTasksByCategory = async (req: Request, res: Response): Promise<void> => {
-    const { categoryId } = req.params
-    const tasks = await taskService.getTasksByCategory(categoryId)
-    res.status(200).json(tasks)
-}
-
-export const getTasksByPriority = async (req: Request, res: Response): Promise<void> => {
-    const { priorityId } = req.params
-    const tasks = await taskService.getTasksByPriority(priorityId)
-    res.status(200).json(tasks)
-}
-
-export const getTasksByDueDate = async (req: Request, res: Response): Promise<void> => {
-    const { dueDate } = req.params
-
-    const parsedDate = new Date(dueDate)
-    if (isNaN(parsedDate.getTime())) {
-        res.status(400).json({ error: 'Fecha inválida' })
-        return
-    }
-
-    const tasks = await taskService.getTasksByDueDate(parsedDate)
-    res.status(200).json(tasks)
-}
-
-export const getTasksByCreatedBy = async (req: Request, res: Response): Promise<void> => {
-    const { userId } = req.params
-    const tasks = await taskService.getTasksByCreatedBy(userId)
-    res.status(200).json(tasks)
-}
+// @desc    Delete a task by ID
+// @route   DELETE /tasks/:id
+// @access  Private
+export const deleteTaskHandler = asyncHandler(async (req: Request, res: Response) => {
+    // ID validated by validateRequest middleware using taskIdParamSchema
+    await taskService.deleteTask(req.params.id);
+    // Service throws NotFoundError if not found
+    res.status(204).send(); // No content
+});

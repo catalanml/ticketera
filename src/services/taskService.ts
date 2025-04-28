@@ -1,137 +1,89 @@
-import Task, { ITask } from '../models/Task'
-import { Types } from 'mongoose'
-import { TaskStatusEnum } from '../enums/taskStatus.enum'
-import { ICategory } from '../models/Category'
-import { IUser } from '../models/User'
-import { populateTaskList, populateTaskOne } from '../utils/populateTask'
+import Task, { ITask } from '../models/Task';
+import { CreateTaskInput, UpdateTaskInput } from '../validators/taskSchemas';
+import { NotFoundError } from '../utils/errors'; // Assuming custom errors
+import { FilterQuery, PopulateOptions } from 'mongoose';
+import { populateTaskOptions } from '../utils/populateTask'; // Import populate options
 
-export async function getAllTasks(): Promise<ITask[]> {
-    return populateTaskList(Task.find())
-}
+/**
+ * Creates a new task.
+ * @param data - Data for the new task.
+ * @param userId - The ID of the user creating the task.
+ * @returns The newly created task document.
+ */
+export const createTask = async (data: CreateTaskInput, userId: string): Promise<ITask> => {
+    // Add createdBy and potentially boardId from data
+    const taskData = { ...data, createdBy: userId };
+    const task = new Task(taskData);
+    await task.save();
+    // Populate references before returning
+    return await task.populate(populateTaskOptions) as ITask;
+};
 
-export async function getTaskById(id: string): Promise<ITask | null> {
-    return populateTaskOne(Task.findById(id))
-}
+/**
+ * Retrieves all tasks, optionally filtering by status, priority, category, assigned user, or board.
+ * @param filters - Optional query parameters for filtering.
+ * @returns A list of task documents.
+ */
+export const getAllTasks = async (filters: FilterQuery<ITask> = {}): Promise<ITask[]> => {
+    // Remove undefined filters
+    Object.keys(filters).forEach(key => filters[key] === undefined && delete filters[key]);
+    // Add board filter if present
+    // Example: if (filters.boardId) { queryFilters.board = filters.boardId; delete filters.boardId; }
 
-export async function createTask(
-    name: string,
-    description: string,
-    category: ICategory['_id'],
-    assignedTo: IUser['_id'] | null,
-    priority: number,
-    status: TaskStatusEnum,
-    dueDate: Date,
-    createdBy: string
-): Promise<ITask> {
-    const task = new Task({
-        name,
-        description,
-        category,
-        assignedTo,
-        priority,
-        status,
-        dueDate,
-        createdBy: new Types.ObjectId(createdBy)
-    })
+    return await Task.find(filters)
+        .populate(populateTaskOptions) // Use shared populate options
+        .sort({ createdAt: -1 }); // Sort by creation date, newest first
+};
 
-    return task.save()
-}
 
-export async function updateTask(
-    id: string,
-    updates: Partial<{
-        name: string
-        description: string
-        category: ICategory['_id']
-        assignedTo: IUser['_id'] | null
-        priority: number
-        status: TaskStatusEnum
-        dueDate: Date
-        editedBy: string
-    }>
-) {
-    const updateData: Record<string, any> = {}
+/**
+ * Retrieves a single task by its ID.
+ * @param id - The ID of the task to retrieve.
+ * @returns The task document or null if not found.
+ * @throws NotFoundError if the task is not found.
+ */
+export const getTaskById = async (id: string): Promise<ITask> => {
+    const task = await Task.findById(id).populate(populateTaskOptions); // Populate references
+    if (!task) {
+        throw new NotFoundError(`Task with ID ${id} not found`);
+    }
+    return task;
+};
 
-    if (updates.name) updateData.name = updates.name
-    if (updates.description) updateData.description = updates.description
-    if (updates.category) updateData.category = updates.category
-    if (updates.assignedTo) updateData.assignedTo = updates.assignedTo
-    if (updates.priority) updateData.priority = updates.priority
-    if (updates.status) updateData.status = updates.status
-    if (updates.dueDate) updateData.dueDate = updates.dueDate
-    if (updates.editedBy) updateData.editedBy = new Types.ObjectId(updates.editedBy)
+/**
+ * Updates an existing task by its ID.
+ * @param id - The ID of the task to update.
+ * @param data - The data to update the task with.
+ * @returns The updated task document or null if not found.
+ * @throws NotFoundError if the task is not found.
+ */
+export const updateTask = async (id: string, data: UpdateTaskInput): Promise<ITask> => {
+    // Handle setting fields to null explicitly if needed in data
+    const updateData = { ...data };
+    if (data.description === null) updateData.description = null; // Preserve explicit null to clear the field
+    if (data.dueDate === null) updateData.dueDate = undefined;
+    if (data.category === null) updateData.category = undefined;
+    if (data.assignedTo === null) updateData.assignedTo = undefined;
+    if (data.board === null) updateData.board = undefined; // Handle board update
 
-    return Task.findByIdAndUpdate(id, updateData, { new: true })
-}
+    const task = await Task.findByIdAndUpdate(id, updateData, { new: true, runValidators: true })
+        .populate(populateTaskOptions); // Populate after update
+    if (!task) {
+        throw new NotFoundError(`Task with ID ${id} not found`);
+    }
+    return task;
+};
 
-export async function deleteTask(id: string) {
-    return Task.findByIdAndUpdate(
-        id,
-        { deleted: true, deleteAt: new Date() },
-        { new: true }
-    )
-}
-
-export async function completeTask(id: string, completedAt: Date, editedBy: string) {
-    return Task.findByIdAndUpdate(
-        id,
-        { completedAt, editedBy: new Types.ObjectId(editedBy) },
-        { new: true }
-    )
-}
-
-export async function getTasksByUser(userId: string): Promise<ITask[]> {
-    return Task.find({ assignedTo: userId })
-        .populate('category', 'name')
-        .populate('assignedTo', 'name')
-        .populate('priority', 'name type')
-        .sort({ createdAt: -1 })
-}
-
-export async function getTasksByStatus(status: TaskStatusEnum): Promise<ITask[]> {
-    return Task.find({ status })
-        .populate('category', 'name')
-        .populate('assignedTo', 'name')
-        .populate('priority', 'name type')
-        .sort({ createdAt: -1 })
-}
-
-export async function getTasksByCategory(
-    categoryId: string
-): Promise<ITask[]> {
-    return Task.find({ category: categoryId })
-        .populate('category', 'name')
-        .populate('assignedTo', 'name')
-        .populate('priority', 'name type')
-        .sort({ createdAt: -1 })
-}
-
-export async function getTasksByPriority(
-    priorityId: string
-): Promise<ITask[]> {
-    return Task.find({ priority: priorityId })
-        .populate('category', 'name')
-        .populate('assignedTo', 'name')
-        .populate('priority', 'name type')
-        .sort({ createdAt: -1 })
-}
-
-export async function getTasksByDueDate(
-    dueDate: Date
-): Promise<ITask[]> {
-    return Task.find({ dueDate })
-        .populate('category', 'name')
-        .populate('assignedTo', 'name')
-        .populate('priority', 'name type')
-        .sort({ createdAt: -1 })
-}
-
-export async function getTasksByCreatedBy(
-    createdBy: string
-): Promise<ITask[]> {
-    return Task.find({ createdBy })
-        .populate('category', 'name')
-        .populate('assignedTo', 'name')
-        .populate('priority', 'name type')
-        .sort({ createdAt: -1 })
-}
+/**
+ * Deletes a task by its ID.
+ * @param id - The ID of the task to delete.
+ * @returns The deleted task document or null if not found.
+ * @throws NotFoundError if the task is not found.
+ */
+export const deleteTask = async (id: string): Promise<ITask> => {
+    const task = await Task.findByIdAndDelete(id);
+    if (!task) {
+        throw new NotFoundError(`Task with ID ${id} not found`);
+    }
+    return task;
+};
