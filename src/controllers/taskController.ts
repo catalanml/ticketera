@@ -3,7 +3,6 @@ import * as taskService from '../services/taskService';
 import { asyncHandler } from '../utils/asyncHandler'; // Corrected import
 import { FilterQuery } from 'mongoose';
 import { ITask } from '../models/Task'; // Import ITask
-import { validateTaskEntities } from '../middlewares/validateEntityExists';
 
 // @desc    Create a new task
 // @route   POST /tasks

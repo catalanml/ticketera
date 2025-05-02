@@ -1,7 +1,7 @@
 import Task, { ITask } from '../models/Task';
 import { CreateTaskInput, UpdateTaskInput } from '../validators/taskSchemas';
 import { NotFoundError } from '../utils/errors'; // Assuming custom errors
-import { FilterQuery, PopulateOptions } from 'mongoose';
+import { FilterQuery } from 'mongoose'; // Removed PopulateOptions as it's not directly used here
 import { populateTaskOptions } from '../utils/populateTask'; // Import populate options
 
 /**
@@ -50,27 +50,68 @@ export const getTaskById = async (id: string): Promise<ITask> => {
     return task;
 };
 
+
 /**
- * Updates an existing task by its ID.
+ * Updates an existing task by its ID using $set and $unset for clarity.
  * @param id - The ID of the task to update.
- * @param data - The data to update the task with.
- * @returns The updated task document or null if not found.
+ * @param data - The data to update the task with (validated by Zod).
+ * @returns The updated task document.
  * @throws NotFoundError if the task is not found.
  */
 export const updateTask = async (id: string, data: UpdateTaskInput): Promise<ITask> => {
-    // Handle setting fields to null explicitly if needed in data
-    const updateData = { ...data };
-    if (data.description === null) updateData.description = null; // Preserve explicit null to clear the field
-    if (data.dueDate === null) updateData.dueDate = undefined;
-    if (data.category === null) updateData.category = undefined;
-    if (data.assignedTo === null) updateData.assignedTo = undefined;
-    if (data.board === null) updateData.board = undefined; // Handle board update
+    const setOps: any = {};
+    const unsetOps: any = {};
 
-    const task = await Task.findByIdAndUpdate(id, updateData, { new: true, runValidators: true })
-        .populate(populateTaskOptions); // Populate after update
+    // Iterate over validated data and prepare $set and $unset operations
+    for (const key in data) {
+        if (data.hasOwnProperty(key)) {
+            const value = data[key as keyof UpdateTaskInput];
+
+            if (value === null) {
+                // Fields to unset when null is provided
+                if (['dueDate', 'category', 'assignedTo', 'board'].includes(key)) {
+                    unsetOps[key] = ""; // Add to $unset
+                }
+                // Fields to set to null explicitly when null is provided
+                else if (key === 'description') {
+                    setOps[key] = null; // Add to $set
+                }
+                // Add handling for other nullable fields if necessary
+            } else if (value !== undefined) {
+                // Add non-null, non-undefined values to $set
+                setOps[key] = value;
+            }
+        }
+    }
+
+    // Construct the final update object
+    const finalUpdate: any = {};
+    if (Object.keys(setOps).length > 0) {
+        finalUpdate.$set = setOps;
+    }
+    if (Object.keys(unsetOps).length > 0) {
+        finalUpdate.$unset = unsetOps;
+    }
+
+    // If there are no operations, fetch and return the current task
+    if (Object.keys(finalUpdate).length === 0) {
+        const existingTask = await Task.findById(id).populate(populateTaskOptions);
+        if (!existingTask) {
+            throw new NotFoundError(`Task with ID ${id} not found`);
+        }
+        return existingTask;
+    }
+
+    // Perform the update operation
+    const task = await Task.findByIdAndUpdate(id, finalUpdate, { new: true, runValidators: true })
+        .populate(populateTaskOptions);
+
+    // Check if the task was found and updated
     if (!task) {
+        // If finalUpdate had operations but task is null, the ID was not found
         throw new NotFoundError(`Task with ID ${id} not found`);
     }
+
     return task;
 };
 

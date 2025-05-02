@@ -15,7 +15,7 @@ export const createTaskSchema = z.object({
             .optional(),
         status: z.nativeEnum(TaskStatus).optional().default(TaskStatus.OPEN),
         priority: z.enum(['Low', 'Medium', 'High'], { required_error: 'Priority is required' }),
-        dueDate: z.string().datetime({ message: "Invalid datetime string! Must be UTC." }).optional(),
+        dueDate: z.string().datetime({ message: "Invalid datetime string! Must be UTC." }).optional().nullable(), // Allow null for dueDate on creation
         category: objectIdSchema.optional(), // Optional category ID
         assignedTo: objectIdSchema.optional(), // Optional assigned user ID
         board: objectIdSchema.optional(), // Optional board ID (NEW)
